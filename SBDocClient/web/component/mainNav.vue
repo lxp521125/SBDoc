@@ -34,7 +34,9 @@
                     {{name}}<i class="el-icon-caret-bottom el-icon--right"></i>
                 </span>
                 <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item command="list">项目列表</el-dropdown-item>
+                    <el-dropdown-item command="team" v-if="team">团队首页</el-dropdown-item>
+                    <el-dropdown-item command="list">返回列表</el-dropdown-item>
+                    <el-dropdown-item command="apply">团队申请</el-dropdown-item>
                     <el-dropdown-item command="setting">个人设置</el-dropdown-item>
                     <el-dropdown-item command="help">帮助</el-dropdown-item>
                     <el-dropdown-item command="about">关于</el-dropdown-item>
@@ -44,11 +46,25 @@
             </el-dropdown>
         </el-col>
         <el-col class="col" :span="2" style="text-align: center;line-height: 60px" v-if="!isLogin">
-            <el-button type="primary" onclick="location='/html/web/login/login.html'">登陆</el-button>
+            <el-button type="info" onclick="location='/html/web/login/login.html'">登录</el-button>
         </el-col>
         <el-col class="col" :span="2" style="text-align: center;line-height: 60px" v-if="!isLogin">
-            <el-button type="primary"  onclick="location='/html/web/register/register.html'">注册</el-button>
+            <el-button type="success"  onclick="location='/html/web/register/register.html'">注册</el-button>
         </el-col>
+        <el-dialog title="团队申请" v-model="showTeam" size="small" ref="team">
+            <el-form ref="form" label-width="100px">
+                <el-form-item label="团队ID">
+                    <el-input  style="width: 80%"  v-model="applyName" placeholder="请输入你要申请的团队ID"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input type="textarea" :rows="2"  style="width: 80%"  v-model="applyDis" placeholder="请输入你要申请的备注"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+            <el-button @click="showTeam = false">取 消</el-button>
+            <el-button type="primary" @click="applyTeam" :loading="applyPending">确 定</el-button>
+        </span>
+        </el-dialog>
     </el-row>
 </template>
 <script>
@@ -60,7 +76,12 @@
             return {
                 isLogin:session.get('id')?true:false,
                 img:session.get('photo'),
-                name:session.get("name")
+                name:session.get("name"),
+                team:session.get("teamId"),
+                showTeam:false,
+                applyPending:false,
+                applyName:"",
+                applyDis:""
             }
         },
         directives:{
@@ -68,9 +89,21 @@
         },
         methods:{
             handleCommand:function (command) {
-                if(command=="list")
+                if(command=="team")
+                {
+                    location.href="/html/web/team/team.html"
+                }
+                else if(command=="list")
                 {
                     location.href="/html/web/project/project.html"
+                }
+                else if(command=="apply")
+                {
+                    this.showTeam=true;
+                    document.getElementById("navBar").style.zIndex="";
+                    this.$refs.team.$on("close",function () {
+                        document.getElementById("navBar").style.zIndex=100;
+                    })
                 }
                 else if(command=="setting")
                 {
@@ -101,6 +134,10 @@
                                 if(verArr[i]>verLocalArr[i])
                                 {
                                     bNew=true;
+                                    break;
+                                }
+                                else if(verArr[i]<verLocalArr[i])
+                                {
                                     break;
                                 }
                             }
@@ -139,13 +176,39 @@
                         }
                     })
                 }
+            },
+            applyTeam:function () {
+                if(!this.applyName)
+                {
+                    $.tip("请输入团队ID",0);
+                    return;
+                }
+                this.applyPending=true;
+                var _this=this;
+                net.put("/team/userapply",{
+                    id:this.applyName,
+                    dis:this.applyDis
+                }).then(function (data) {
+                    _this.applyPending=false;
+                    _this.applyName="";
+                    _this.applyDis=""
+                    if(data.code==200)
+                    {
+                        $.notify("请求已发送，等待团队管理员响应",1);
+                        _this.showTeam=false;
+                    }
+                    else
+                    {
+                        $.notify(data.msg,0);
+                    }
+                })
             }
         },
         created:function () {
             var ele;
             this.$nextTick(function () {
                 ele=document.getElementById("navBar");
-                ele.style.zIndex=100
+                ele.style.zIndex=100;
             })
             var _this=this;
             if(this.transparent)
@@ -155,7 +218,7 @@
                     {
                         ele.style.position="fixed";
                         ele.style.top=0;
-                        ele.style.backgroundColor="white"
+                        ele.style.backgroundColor="rgb(39,52,68)"
                     }
                     else
                     {

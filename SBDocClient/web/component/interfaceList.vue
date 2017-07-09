@@ -6,13 +6,13 @@
                     <span :class="item.show?'el-icon-caret-bottom':'el-icon-caret-right'" style="color:#c7c7c7 "></span>
                 </el-col>
                 <el-col class="col" :span="12" :style="{margin: 0,fontSize: 'larger',color: item.type==0?'#20A0FF':'red',whiteSpace: 'nowrap',padding: 0,textOverflow:'ellipsis',overflow:'hidden'}" @click.native="item.show=!item.show">
-                    {{item.name}}
+                    {{item.name}}({{item.data.length}})
                 </el-col>
                 <el-col class="col" :span="4" style="height: 40px;white-space: nowrap" @click.native="item.show=!item.show">
 
                 </el-col>
                 <el-col class="col" :span="4" style="height: 40px;white-space: nowrap;text-align: center">
-                    <el-dropdown trigger="click" v-if="session.role==0"  style="width: 100%;height: 100%;cursor: pointer">
+                    <el-dropdown trigger="click" v-if="session.role==0 && !search"  style="width: 100%;height: 100%;cursor: pointer">
                         <div class="el-dropdown-link">
                             <i class="el-icon-more"></i>
                         </div>
@@ -23,6 +23,8 @@
                             <el-dropdown-item  v-if="item.type==0"><div @click="removeGroup(item)">删除</div></el-dropdown-item>
                             <el-dropdown-item  v-if="item.type==1"><div @click="clear">清空</div></el-dropdown-item>
                             <el-dropdown-item  v-if="item.type==0 && objCopy"><div @click="paste(item)">粘贴</div></el-dropdown-item>
+                            <el-dropdown-item ><div @click="importInterface(item)" v-if="item.type==0">导入接口</div></el-dropdown-item>
+                            <el-dropdown-item ><div @click="exportGroup(item)" v-if="item.type==0">导出分组</div></el-dropdown-item>
                         </el-dropdown-menu>
                     </el-dropdown>
                 </el-col>
@@ -48,6 +50,7 @@
                                 <el-dropdown-item v-if="item.type==0"><div @click="removeInterface(item1)">删除</div></el-dropdown-item>
                                 <el-dropdown-item><div @click="copy(item,item1)">复制</div></el-dropdown-item>
                                 <el-dropdown-item v-if="item.type==1"><div @click="destroyInterface(item1)">彻底删除</div></el-dropdown-item>
+                                <el-dropdown-item><div @click="exportInterface(item1)">导出接口</div></el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
                     </el-col>
@@ -66,7 +69,7 @@
         },
         computed:{
             arr:function () {
-                return this.$store.state.interfaceList
+                return this.$store.state.search?this.$store.state.interfaceSearchList:this.$store.state.interfaceList
             },
             objCopy:{
                 get:function () {
@@ -75,6 +78,9 @@
                 set:function (value) {
                     this.$store.commit("setObjCopy",value);
                 }
+            },
+            search:function () {
+                return this.$store.state.search
             }
         },
         methods:{
@@ -200,6 +206,10 @@
                 {
                     return;
                 }
+                session.remove("snapshotId");
+                session.remove("snapshotDis");
+                session.remove("snapshotCreator");
+                session.remove("snapshotDate");
                 $.startHud("#body");
                 this.$store.dispatch("info",{
                     item:item,
@@ -219,6 +229,10 @@
 
             },
             addInterface:function (item) {
+                session.remove("snapshotId");
+                session.remove("snapshotDis");
+                session.remove("snapshotCreator");
+                session.remove("snapshotDate");
                 this.$store.dispatch("add",{
                     item:null,
                     id:item._id
@@ -313,6 +327,68 @@
                     })
                     this.objCopy=null;
                     $.notify("粘贴完成，请修改后保存",1);
+                }
+            },
+            importInterface:function (item) {
+                $.inputMul(this,"请输入SBDoc导出接口的JSON",function (val) {
+                    if(!val)
+                    {
+                        $.tip("请输入JSON",0);
+                        return false;
+                    }
+                    $.startHud();
+                    net.post("/interface/importjson",{
+                        id:item._id,
+                        json:val
+                    }).then(function (data) {
+                        $.stopHud();
+                        if(data.code==200)
+                        {
+                            $.notify("导入成功",1);
+                            var o={
+                                _id:data.data._id,
+                                name:data.data.name,
+                                method:data.data.method,
+                                finish:data.data.finish,
+                                select:0
+                            }
+                            item.data.push(o)
+                            item.show=1;
+                        }
+                        else
+                        {
+                            $.notify(data.msg,0);
+                        }
+                    })
+                    return true;
+                })
+            },
+            exportGroup:function (item) {
+                var type=navigator.userAgent;
+                if(type.indexOf("Firefox")>-1)
+                {
+                    window.open(location.protocol+"//"+location.host+"/group/exportjson?group="+item._id);
+                }
+                else
+                {
+                    var link=document.createElement("a");
+                    link.href="/group/exportjson?group="+item._id;
+                    link.download=item.name+".json";
+                    link.click();
+                }
+            },
+            exportInterface:function (item) {
+                var type=navigator.userAgent;
+                if(type.indexOf("Firefox")>-1)
+                {
+                    window.open(location.protocol+"//"+location.host+"/interface/exportjson?id="+item._id);
+                }
+                else
+                {
+                    var link=document.createElement("a");
+                    link.href="/interface/exportjson?id="+item._id;
+                    link.download=item.name+".json";
+                    link.click();
                 }
             }
         }

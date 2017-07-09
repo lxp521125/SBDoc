@@ -42,7 +42,7 @@ var interface=[
                 type:String,
                 uppercase:1,
                 validate:{
-                    in:["GET","POST","PUT","DELETE"]
+                    in:["GET","POST","PUT","DELETE","PATCH"]
                 }
             },
             header:{
@@ -82,7 +82,7 @@ var interface=[
             id:{
                 type:String,
                 optional:1
-            },
+            }
         },
         "data":String,
         user:1,
@@ -135,7 +135,8 @@ var interface=[
                 type:String
             },
             group:{
-                type:String
+                type:String,
+                optional:1
             },
             run:{
                 optional:1,
@@ -145,8 +146,95 @@ var interface=[
         "data":String,
         user:1,
         handle:inter.info
-    }
-
+    },
+    {
+        "method":"GET",
+        "path":"/interface/share",
+        "param": {
+            id:{
+                type:String
+            }
+        },
+        "data":String,
+        handle:inter.share
+    },
+    {
+        "method":"GET",
+        "path":"/interface/exportjson",
+        "param": {
+            id:{
+                type:String
+            }
+        },
+        "data":String,
+        user:1,
+        handle:inter.exportJSON
+    },
+    {
+        "method":"POST",
+        "path":"/interface/importjson",
+        "param": {
+            id:{
+                type:String
+            },
+            json:{
+                type:String
+            }
+        },
+        "data":String,
+        user:1,
+        handle:inter.importJSON
+    },
+    {
+        "method":"POST",
+        "path":"/interface/snapshot",
+        "param": {
+            id:{
+                type:String
+            },
+            dis:String
+        },
+        "data":String,
+        user:1,
+        handle:inter.createSnapshot
+    },
+    {
+        "method":"GET",
+        "path":"/interface/snapshotlist",
+        "param": {
+            id:{
+                type:String
+            },
+            page:Number
+        },
+        "data":String,
+        user:1,
+        handle:inter.snapshotList
+    },
+    {
+        "method":"DELETE",
+        "path":"/interface/snapshot",
+        "param": {
+            id:{
+                type:String
+            }
+        },
+        "data":String,
+        user:1,
+        handle:inter.removeSnapshot
+    },
+    {
+        "method":"PUT",
+        "path":"/interface/snapshotroll",
+        "param": {
+            id:{
+                type:String
+            }
+        },
+        "data":String,
+        user:1,
+        handle:inter.snapshotRoll
+    },
 ];
 
 module.exports=interface;

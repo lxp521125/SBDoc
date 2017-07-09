@@ -10,11 +10,12 @@
                                 <el-option  value="POST" label="POST"></el-option>
                                 <el-option  value="PUT" label="PUT"></el-option>
                                 <el-option  value="DELETE" label="DELETE"></el-option>
+                                <el-option  value="PATCH" label="PATCH"></el-option>
                             </el-select>
                         </div>
                     </el-col>
                     <el-col class="col" :span="7" style="line-height: 50px;text-align: center">
-                        <el-autocomplete style="width: 100%" class="inline-input" v-model="baseUrl" :fetch-suggestions="querySearch" placeholder="选择或者填入你的值" icon="caret-bottom" :on-icon-click="showAutoComplete"></el-autocomplete>
+                        <el-autocomplete style="width: 100%" class="inline-input" v-model="baseUrl" :fetch-suggestions="querySearch" placeholder="选择或者填入你的BaseUrl" icon="caret-bottom" :on-icon-click="showAutoComplete" @input="changeBaseUrl"></el-autocomplete>
                     </el-col>
                     <el-col class="col" :span="2" style="line-height: 50px;text-align: left">
                         <el-popover ref="popover1" placement="bottom" width="400" trigger="hover">
@@ -42,26 +43,26 @@
                 </el-row>
             </el-row>
             <el-row class="row" style="padding: 20px;margin-top: 15px;background-color: white;border-radius: 5px;box-shadow: 0px 2px 2px #888888;">
-                <el-tabs type="card">
-                    <el-tab-pane :label="paramTab" v-if="param.length>0">
+                <el-tabs type="card" v-model="tabType">
+                    <el-tab-pane :label="paramTab" v-if="param.length>0" name="param">
                         <runparam></runparam>
                     </el-tab-pane>
-                    <el-tab-pane :label="queryTab">
+                    <el-tab-pane :label="queryTab" name="query">
                         <runquery v-show="!queryRawShow"></runquery>
                         <el-input type="textarea" :rows="3" style="height: 100px;margin-top: 10px" placeholder="在这里编辑原始的url参数字符串，以&符合分割" v-show="queryRawShow" v-model="queryRawStr"></el-input>
                         <el-button type="primary" size="small" style="margin-top: 20px" @click="toggleQuery">{{queryRawShow?'Commit Raw':'Edit Raw'}}</el-button>
                     </el-tab-pane>
-                    <el-tab-pane :label="headerTab">
+                    <el-tab-pane :label="headerTab" name="header">
                         <runheader v-show="!headerRawShow"></runheader>
                         <el-input  type="textarea" :rows="3" style="height: 100px;margin-top: 10px" placeholder="在这里编辑原始的header字符串，以回车分割" v-show="headerRawShow" v-model="headerRawStr"></el-input>
                         <el-button type="primary" size="small" style="margin-top: 20px" @click="toggleHeader">{{headerRawShow?'Commit Raw':'Edit Raw'}}</el-button>
                     </el-tab-pane>
-                    <el-tab-pane :label="bodyTab" v-if="interface.method=='POST' || interface.method=='PUT'">
+                    <el-tab-pane :label="bodyTab" v-if="interface.method=='POST' || interface.method=='PUT' || interface.method=='PATCH'" name="body">
                         <runbody v-show="!bodyRawShow"></runbody>
                         <el-input type="textarea" :rows="3" style="height: 100px;margin-top: 10px" placeholder="在这里编辑原始的url参数字符串，以&符合分割，文件类型用[FILE]代替" v-show="bodyRawShow" v-model="bodyRawStr"></el-input>
                         <el-button type="primary" size="small" style="margin-top: 20px" @click="toggleBody" v-if="bodyInfo.type==0">{{bodyRawShow?'Commit Raw':'Edit Raw'}}</el-button>
                     </el-tab-pane>
-                    <el-tab-pane label="Inject">
+                    <el-tab-pane label="Inject" name="inject">
                         <runinject></runinject>
                     </el-tab-pane>
                 </el-tabs>
@@ -69,7 +70,7 @@
             <el-row class="row" style="padding: 15px;margin-top: 15px;background-color: white;border-radius: 5px;box-shadow: 0px 2px 2px #888888;">
                 <el-row class="row" style="padding: 10px;margin-bottom: 10px">
             <span style="font-size: 18px;">
-                Result:&nbsp;&nbsp;<span :style="{color:status.match(/^2/)?'green':'red'}">{{status=='0'?'ERROR':status}}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-size: 18px;color: #50a3ff">{{second?("耗时"+second+"秒"):""}}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span v-if="errorCount>0" style="color: red">Error:&nbsp;{{errorCount}}</span>
+                Result:&nbsp;&nbsp;<span :style="{color:statusStr.match(/^2/)?'green':'red'}">{{statusStr=='0'?'ERROR':statusStr}}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-size: 18px;color: #50a3ff">{{second?("耗时"+second+"秒"):""}}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span v-if="errorCount>0" style="color: red">Error:&nbsp;{{errorCount}}</span>
             </span>
                     <el-popover ref="error" placement="bottom" width="400" trigger="hover" v-if="errorCount>0" content="切换到Advance Tab页，移动到红色的行上面即可看到错误信息">
                     </el-popover>
@@ -139,12 +140,14 @@
     var runParam=require("./runParam.vue")
     var runInject=require("./runInject.vue")
     var store=require("../projectinfo/storeRun")
+    var bus=require("../bus/projectInfoBus");
     module.exports={
-        props:["interfaceEdit","baseUrls"],
+        props:["interfaceEdit","baseUrls","status","globalBefore","globalAfter"],
         data:function () {
             return {
                 session:$.clone(session.raw()),
                 runPending:false,
+                tabType:"query"
             }
         },
         store:store,
@@ -161,10 +164,18 @@
             },
             baseUrl:{
                 get:function () {
-                    return store.state.baseUrl;
+                    if((store.state.baseUrl && false) || session.get("lastBaseUrl"))
+                    {
+                        return session.get("lastBaseUrl")
+                    }
+                    else
+                    {
+                        return store.state.baseUrl;
+                    }
                 },
                 set:function (val) {
                     store.commit("setBaseUrl",val);
+                    session.set("lastBaseUrl",val);
                 }
             },
             paramTab:function () {
@@ -206,7 +217,7 @@
             bodyRawShow:function () {
                 return store.state.bodyRawShow;
             },
-            status:function () {
+            statusStr:function () {
                 return store.state.status;
             },
             second:function () {
@@ -276,7 +287,11 @@
             },
             save:function () {
                 var _this=this;
-                store.dispatch("save").then(function () {
+                store.dispatch("save").then(function (data) {
+                    if(data && data.code!=200)
+                    {
+                        $.tip(data.msg,0);
+                    }
                     _this.$emit("save");
                     _this.$refs.box.close();
                 })
@@ -299,6 +314,12 @@
                     var results=_this.baseUrls.map(function (obj) {
                         return {value:obj}
                     })
+                    if(_this.interfaceEdit._id)
+                    {
+                        results.push({
+                            value:"MockServer"
+                        })
+                    }
                     if(queryString)
                     {
                         results=results.filter(function (obj) {
@@ -335,6 +356,14 @@
             },
             changeMethod:function () {
                 store.commit("changeMethod")
+                if(this.tabType=="query" && (this.interfaceEdit.method=="POST" || this.interfaceEdit.method=="PUT" || this.interfaceEdit.method=="PATCH"))
+                {
+                    this.tabType="body";
+                }
+                else if(this.tabType=="body" && (this.interfaceEdit.method=="GET" || this.interfaceEdit.method=="DELETE"))
+                {
+                    this.tabType="query";
+                }
             },
             paste:function () {
                 setTimeout(function () {
@@ -356,7 +385,18 @@
                                     var arrQuery1=arrQuery[i].split("=");
                                     arrStoreQuery.push({
                                         name:arrQuery1[0],
-                                        value:arrQuery1[1]?[decodeURIComponent(arrQuery1[1])]:[],
+                                        value:arrQuery1[1]?{
+                                            type:0,
+                                            status:"",
+                                            data:[{
+                                                value:decodeURIComponent(arrQuery1[1]),
+                                                remark:""
+                                            }]
+                                        }:{
+                                            type:0,
+                                            status:"",
+                                            data:[]
+                                        },
                                         must:1,
                                         remark:"",
                                         selValue:arrQuery1[1]?decodeURIComponent(arrQuery1[1]):"",
@@ -379,12 +419,33 @@
                         })
                     }
                 },100)
+            },
+            changeBaseUrl:function () {
+                if(this.baseUrl=="MockServer")
+                {
+                    $.tip("如果你修改了Mock数据，请在Mock之前保存接口",1);
+                }
             }
         },
         created:function () {
             store.commit("clear");
-            store.commit("initData",this.interfaceEdit)
             store.commit("setBaseUrls",this.baseUrls);
+            store.commit("setArrStatus",this.$options.propsData.status);
+            store.commit("setGlobalBefore",this.globalBefore);
+            store.commit("setGlobalAfter",this.globalAfter);
+            store.commit("initData",this.interfaceEdit);
+            if(this.interface.method=="GET" || this.interface.method=="DELETE")
+            {
+                this.tabType="query"
+            }
+            else
+            {
+                this.tabType="body"
+            }
+            if(session.get("lastBaseUrl"))
+            {
+                store.commit("setBaseUrl",session.get("lastBaseUrl"));
+            }
         },
     }
 </script>

@@ -17,6 +17,14 @@ var interface=[
             id:{
                 optional:1,
                 type:String
+            },
+            import:{
+                type:Number,
+                optional:1
+            },
+            team:{
+                optional:1,
+                type:String
             }
         },
         "data":String,
@@ -214,6 +222,178 @@ var interface=[
         },
         user:1,
         handle:[project.validateUser,project.addUrl]
+    },
+    {
+        "method":"GET",
+        "path":"/project/exportjson",
+        "param": {
+            id:{
+                type:String
+            },
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.inProject,project.exportJSON]
+    },
+    {
+        "method":"GET",
+        "path":"/project/exporthtml",
+        "param": {
+            id:{
+                type:String
+            },
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.inProject,project.exportHTML]
+    },
+    {
+        "method":"POST",
+        "path":"/project/importjson",
+        "param": {
+            json:{
+                type:String
+            },
+            team:{
+                type:String,
+                optional:1
+            }
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.importJSON]
+    },
+    {
+        "method":"PUT",
+        "path":"/project/inject",
+        "param": {
+            id:{
+                type:String
+            },
+            before:{
+                type:String,
+                optional:1
+            },
+            after:{
+                type:String,
+                optional:1
+            }
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.setInject]
+    },
+    {
+        "method":"GET",
+        "path":"/project/urllist",
+        "param": {
+            id:String
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.inProject,project.urlList]
+    },
+    {
+        "method":"GET",
+        "path":"/project/importmember",
+        "param": {
+            id:String
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.inProject,project.getImportMember]
+    },
+    {
+        "method":"POST",
+        "path":"/project/importmember",
+        "param": {
+            id:String,
+            data:String
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.inProject,project.importMember]
+    },
+    {
+        "method":"PUT",
+        "path":"/project/owner",
+        "param": {
+            id:String,
+            user:String
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.setOwner]
+    },
+    {
+        "method":"GET",
+        "path":"/project/applylist",
+        "param": {
+            id:String,
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.applyList]
+    },
+    {
+        "method":"PUT",
+        "path":"/project/handleapply",
+        "param": {
+            id:String,
+            apply:String,
+            state:{
+                type:Number,
+                in:[1,2]
+            }
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.handleApply]
+    },
+    {
+        "method":"PUT",
+        "path":"/project/user",
+        "param": {
+            id:String,
+            user:String
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.setUser]
+    },
+    {
+        "method":"GET",
+        "path":"/project/users",
+        "param": {
+            id:String,
+        },
+        "data":{
+
+        },
+        user:1,
+        handle:[project.validateUser,project.getUsers]
     },
 ];
 

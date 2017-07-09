@@ -1,1 +1,1 @@
-webpackJsonp([10],{123:function(n,a,o){(function(n,a){var e=o(7);new n({el:"#app",data:{isLogin:!!a.get("id")},components:{mainnav:e},methods:{}})}).call(a,o(0),o(3))}},[123]);
+webpackJsonp([11],{235:function(n,a,t){(function(n,a){var e=t(8);new n({el:"#app",data:{isLogin:!!a.get("id"),type:"first"},components:{mainnav:e},methods:{}})}).call(a,t(3),t(2))}},[235]);

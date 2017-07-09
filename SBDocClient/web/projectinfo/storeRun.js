@@ -2,6 +2,7 @@
  * Created by sunxin on 2017/2/28.
  */
 var config=require("../util/config")
+var bus=require("../bus/projectInfoBus")
 module.exports=new Vuex.Store({
     state:{
         interface:{},
@@ -36,6 +37,15 @@ module.exports=new Vuex.Store({
             rawTextRemark:"",
             rawFileRemark:"",
             rawText:"",
+            rawJSON:[{
+                name:"",
+                must:1,
+                type:0,
+                remark:"",
+                show:1,
+                mock:"",
+                drag:1
+            }]
         },
         fileResult:"",
         resHeader:[],
@@ -54,7 +64,10 @@ module.exports=new Vuex.Store({
         bodyRawStr:"",
         rawData:"",
         encryptType:"",
-        errorCount:0
+        errorCount:0,
+        arrStatus:[],
+        globalBefore:"",
+        globalAfter:""
     },
     getters:{
         querySave:function (state,getters) {
@@ -136,10 +149,19 @@ module.exports=new Vuex.Store({
             state.param=[];
             state.bodyInfo={
                 type:0,
-                    rawType:0,
-                    rawTextRemark:"",
-                    rawFileRemark:"",
-                    rawText:"",
+                rawType:0,
+                rawTextRemark:"",
+                rawFileRemark:"",
+                rawText:"",
+                rawJSON:[{
+                    name:"",
+                    must:1,
+                    type:0,
+                    remark:"",
+                    show:1,
+                    mock:"",
+                    drag:1
+                }]
             };
             state.fileResult="";
             state.resHeader=[];
@@ -159,6 +181,7 @@ module.exports=new Vuex.Store({
             state.rawData="";
             state.encryptType="";
             state.errorCount=0;
+            state.arrStatus=[];
         },
         initData:function (state,data) {
             state.interface=data;
@@ -168,9 +191,27 @@ module.exports=new Vuex.Store({
                 {
                     Vue.set(state.interface.queryParam[i],"enable",1);
                     Vue.set(state.interface.queryParam[i],"selValue","");
-                    if(state.interface.queryParam[i].value && state.interface.queryParam[i].value.length>0)
+                    if(state.interface.queryParam[i].value && state.interface.queryParam[i].value.type==0 && state.interface.queryParam[i].value.data.length>0)
                     {
-                        state.interface.queryParam[i].selValue=state.interface.queryParam[i].value[0];
+                        state.interface.queryParam[i].selValue=state.interface.queryParam[i].value.data[0].value;
+                    }
+                    else if(state.interface.queryParam[i].value && state.interface.queryParam[i].value.type==1 && state.interface.queryParam[i].value.status)
+                    {
+                        var objStatus=null;
+                        state.arrStatus.forEach(function (obj) {
+                            if(obj.id==state.interface.queryParam[i].value.status)
+                            {
+                                objStatus=obj;
+                            }
+                        })
+                        if(objStatus && objStatus.data.length>0)
+                        {
+                            state.interface.queryParam[i].selValue=objStatus.data[0].key;
+                        }
+                        else
+                        {
+                            state.interface.queryParam[i].selValue="";
+                        }
                     }
                     else
                     {
@@ -186,9 +227,27 @@ module.exports=new Vuex.Store({
                 {
                     Vue.set(state.interface.bodyParam[i],"enable",1);
                     Vue.set(state.interface.bodyParam[i],"selValue","");
-                    if(state.interface.bodyParam[i].value && state.interface.bodyParam[i].value.length>0)
+                    if(state.interface.bodyParam[i].value && state.interface.bodyParam[i].value.type==0 && state.interface.bodyParam[i].value.data.length>0)
                     {
-                        state.interface.bodyParam[i].selValue=state.interface.bodyParam[i].value[0];
+                        state.interface.bodyParam[i].selValue=state.interface.bodyParam[i].value.data[0].value;
+                    }
+                    else if(state.interface.bodyParam[i].value && state.interface.bodyParam[i].value.type==1 && state.interface.bodyParam[i].value.status)
+                    {
+                        var objStatus=null;
+                        state.arrStatus.forEach(function (obj) {
+                            if(obj.id==state.interface.bodyParam[i].value.status)
+                            {
+                                objStatus=obj;
+                            }
+                        })
+                        if(objStatus && objStatus.data.length>0)
+                        {
+                            state.interface.bodyParam[i].selValue=objStatus.data[0].key;
+                        }
+                        else
+                        {
+                            state.interface.bodyParam[i].selValue="";
+                        }
                     }
                     else
                     {
@@ -207,9 +266,27 @@ module.exports=new Vuex.Store({
                 for(var i=0;i<state.interface.restParam.length;i++)
                 {
                     Vue.set(state.interface.restParam[i],"selValue","");
-                    if(state.interface.restParam[i].value && state.interface.restParam[i].value.length>0)
+                    if(state.interface.restParam[i].value && state.interface.restParam[i].value.type==0 && state.interface.restParam[i].value.data.length>0)
                     {
-                        state.interface.restParam[i].selValue=state.interface.restParam[i].value[0];
+                        state.interface.restParam[i].selValue=state.interface.restParam[i].value.data[0].value;
+                    }
+                    else if(state.interface.restParam[i].value && state.interface.restParam[i].value.type==1 && state.interface.restParam[i].value.status)
+                    {
+                        var objStatus=null;
+                        state.arrStatus.forEach(function (obj) {
+                            if(obj.id==state.interface.restParam[i].value.status)
+                            {
+                                objStatus=obj;
+                            }
+                        })
+                        if(objStatus && objStatus.data.length>0)
+                        {
+                            state.interface.restParam[i].selValue=objStatus.data[0].key;
+                        }
+                        else
+                        {
+                            state.interface.restParam[i].selValue="";
+                        }
                     }
                     else
                     {
@@ -233,6 +310,22 @@ module.exports=new Vuex.Store({
                 if(state.bodyInfo.rawFileRemark===undefined)
                 {
                     Vue.set(state.bodyInfo,"rawFileRemark","");
+                }
+                if(state.bodyInfo.rawJSON==undefined)
+                {
+                    Vue.set(state.bodyInfo,"rawJSON",[{
+                        name:"",
+                        must:1,
+                        type:0,
+                        remark:"",
+                        show:1,
+                        mock:"",
+                        drag:1
+                    }]);
+                }
+                else
+                {
+                    helper.initResultShow(state.bodyInfo.rawJSON);
                 }
             }
         },
@@ -267,6 +360,14 @@ module.exports=new Vuex.Store({
                         })
                     }
                 }
+                arr.push({
+                    name:"",
+                    must:0,
+                    remark:"",
+                    value:"",
+                    selValue:"",
+                    enable:1
+                })
                 state.query=arr;
             }
             else
@@ -318,14 +419,11 @@ module.exports=new Vuex.Store({
                         })
                     }
                 }
-                if(arrHeader.length==0)
-                {
-                    arrHeader.push({
-                        name:"",
-                        value:"",
-                        remark:""
-                    })
-                }
+                arrHeader.push({
+                    name:"",
+                    value:"",
+                    remark:""
+                })
                 state.header=arrHeader;
             }
             else
@@ -361,7 +459,7 @@ module.exports=new Vuex.Store({
                             valueObj.selValue=selValue;
                         }
                         arr.push({
-                            name:param2[0],
+                            name:decodeURIComponent(param2[0]),
                             type:valueObj?valueObj.type:(selValue=="[FILE]"?1:0),
                             must:valueObj?valueObj.must:1,
                             remark:valueObj?valueObj.remark:"",
@@ -376,6 +474,17 @@ module.exports=new Vuex.Store({
                         })
                     }
                 }
+                arr.push(
+                    {
+                        name:"",
+                        type:0,
+                        must:0,
+                        remark:"",
+                        value:"",
+                        selValue:"",
+                        enable:1
+                    }
+                )
                 state.body=arr;
             }
             else
@@ -393,7 +502,7 @@ module.exports=new Vuex.Store({
             }
         },
         changeMethod:function (state) {
-            if(state.interface.method=="POST" || state.interface.method=="PUT")
+            if(state.interface.method=="POST" || state.interface.method=="PUT" || state.interface.method=="PATCH")
             {
                 if(state.header.length==1 && !state.header[0].name)
                 {
@@ -469,7 +578,11 @@ module.exports=new Vuex.Store({
                             arrParam.push({
                                 name:str,
                                 remark:"",
-                                value:[]
+                                value:{
+                                    type:0,
+                                    status:"",
+                                    data:[]
+                                }
                             })
                         }
                     }
@@ -492,7 +605,19 @@ module.exports=new Vuex.Store({
         },
         setBodyRawStr:function (state,val) {
             state.bodyRawStr=val;
-        }
+        },
+        setArrStatus:function (state,val) {
+            state.arrStatus=val;
+        },
+        setGlobalBefore:function (state,val) {
+            state.globalBefore=val;
+        },
+        setGlobalAfter:function (state,val) {
+            state.globalAfter=val;
+        },
+        setEncryptType:function (state,val) {
+            state.encryptType=val;
+        },
     },
     actions:{
         run:function (context) {
@@ -508,36 +633,46 @@ module.exports=new Vuex.Store({
                     resolve(obj)
                 });
             }
-            var indexHttp=baseUrl.indexOf("://"),indexSlash;
-            if(indexHttp==-1)
+            var bMock=false;
+            if(baseUrl!="MockServer")
             {
-                indexSlash=baseUrl.indexOf("/")
+                var indexHttp=baseUrl.indexOf("://"),indexSlash;
+                if(indexHttp==-1)
+                {
+                    indexSlash=baseUrl.indexOf("/")
+                }
+                else
+                {
+                    indexSlash=baseUrl.indexOf("/",indexHttp+3);
+                }
+                if(indexSlash>-1)
+                {
+                    var baseUrlTemp=baseUrl.substring(0,indexSlash);
+                    var pathTemp=baseUrl.substr(indexSlash);
+                    if(pathTemp[pathTemp.length-1]=="/" && path[0]=="/")
+                    {
+                        pathTemp=pathTemp.substr(0,pathTemp.length-1);
+                    }
+                    else if(pathTemp[pathTemp.length-1]!="/" && path[0]!="/" && pathTemp.indexOf("?")==-1 && pathTemp.indexOf("#")==-1)
+                    {
+                        pathTemp+="/"
+                    }
+                    baseUrl=baseUrlTemp;
+                    path=pathTemp+path;
+                }
+                else
+                {
+                    if(path[0]!="/")
+                    {
+                        path="/"+path;
+                    }
+                }
             }
             else
             {
-                indexSlash=baseUrl.indexOf("/",indexHttp+3);
-            }
-            if(indexSlash>-1)
-            {
-                var baseUrlTemp=baseUrl.substring(0,indexSlash);
-                var pathTemp=baseUrl.substr(indexSlash);
-                if(pathTemp[pathTemp.length-1]=="/" && path[0]=="/")
-                {
-                    pathTemp=pathTemp.substr(0,pathTemp.length-1);
-                }
-                else if(pathTemp[pathTemp.length-1]!="/" && path[0]!="/" && pathTemp.indexOf("?")==-1 && pathTemp.indexOf("#")==-1)
-                {
-                    pathTemp+="/"
-                }
-                baseUrl=baseUrlTemp;
-                path=pathTemp+path;
-            }
-            else
-            {
-                if(path[0]!="/")
-                {
-                    path="/"+path;
-                }
+                bMock=true;
+                baseUrl=config.baseUrl;
+                path="/mock/"+sessionStorage.getItem("projectId")+(path[0]!="/"?("/"+path):path);
             }
             context.state.param.forEach(function (obj) {
                 if(obj.name)
@@ -593,7 +728,7 @@ module.exports=new Vuex.Store({
                 }
             })
             var body={},bUpload=false;
-            if(method=="POST" || method=="PUT")
+            if(method=="POST" || method=="PUT" || method=="PATCH")
             {
                 if(context.state.bodyInfo.type==0)
                 {
@@ -661,6 +796,13 @@ module.exports=new Vuex.Store({
                             body=context.state.bodyInfo.rawText;
                         }
                     }
+                    else if(context.state.bodyInfo.rawType==2)
+                    {
+                        var obj={};
+                        var result=helper.resultSave(context.state.bodyInfo.rawJSON);
+                        helper.convertToJSON(result,obj,null,1);
+                        body=obj;
+                    }
                     else
                     {
                         if(!context.state.fileResult)
@@ -676,10 +818,21 @@ module.exports=new Vuex.Store({
                     }
                 }
             }
-            var beforeCode=$.trim(context.state.interface.before);
-            if(beforeCode)
+            if(context.state.interface.before.mode==0)
             {
-                helper.runBefore(beforeCode,baseUrl,path,method,query,header,body)
+                if(context.state.globalBefore)
+                {
+                    helper.runBefore(context.state.globalBefore,baseUrl,path,method,query,header,body)
+                }
+                helper.runBefore(context.state.interface.before.code,baseUrl,path,method,query,header,body)
+            }
+            else
+            {
+                helper.runBefore(context.state.interface.before.code,baseUrl,path,method,query,header,body)
+            }
+            if((method=="POST" || method=="PUT" || method=="PATCH") && context.state.bodyInfo.type==1 && context.state.bodyInfo.rawType==2)
+            {
+                body=JSON.stringify(body);
             }
             query=$.param(query);
             if(query.length>0)
@@ -693,7 +846,7 @@ module.exports=new Vuex.Store({
             header["__headers"]=JSON.stringify(objHeaders);
             var proxyUrl="/proxy";
             var bNet=false;
-            if(/10\./i.test(baseUrl) || /192\.168\./i.test(baseUrl) || /127\.0\.0\.1/i.test(baseUrl) || /172\.(16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)\./.test(baseUrl) || /localhost/i.test(baseUrl))
+            if((/10\./i.test(baseUrl) || /192\.168\./i.test(baseUrl) || /127\.0\.0\.1/i.test(baseUrl) || /172\.(16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)\./.test(baseUrl) || /localhost/i.test(baseUrl)) && !bMock)
             {
                 bNet=true;
                 proxyUrl="http://127.0.0.1:36742";
@@ -737,16 +890,22 @@ module.exports=new Vuex.Store({
                     context.state.type="object"
                     context.state.resultData=result.data;
                     context.state.rawData=JSON.stringify(result.data);
-                    context.state.draw=helper.format(context.state.rawData,0,context.state.interface.outParam).draw;
-                    var obj=helper.format(context.state.rawData,1,context.state.interface.outParam);
+                    var outParam=helper.resultSave(context.state.interface.outParam)
+                    context.state.draw=helper.format(context.state.rawData,0,outParam,context.state.arrStatus).draw;
+                    var obj=helper.format(context.state.rawData,1,outParam,context.state.arrStatus);
                     context.state.drawMix=obj.draw
                     context.state.errorCount=obj.error;
                 }
                 else if(result.header["content-type"] && result.header["content-type"].indexOf("image/")>-1)
                 {
+                    if(context.state.imgUrl)
+                    {
+                        $.revokeUrlObject(context.state.imgUrl);
+                        context.state.imgUrl=""
+                    }
                     context.state.type="img";
                     context.state.rawData="";
-                    context.state.imgUrl=baseUrl+path;
+                    context.state.imgUrl=$.createUrlObject(result.data);
                     context.state.errorCount=0;
                 }
                 else
@@ -756,10 +915,17 @@ module.exports=new Vuex.Store({
                     context.state.drawMix=result.data;
                     context.state.errorCount=0;
                 }
-                var AfterCode=$.trim(context.state.interface.after);
-                if(AfterCode)
+                if(context.state.interface.after.mode==0)
                 {
-                    helper.runAfter(AfterCode,result.status,result.header,result.data);
+                    if(context.state.globalAfter)
+                    {
+                        helper.runAfter(context.state.globalAfter,result.status,result.header,result.data)
+                    }
+                    helper.runAfter(context.state.interface.after.code,result.status,result.header,result.data)
+                }
+                else
+                {
+                    helper.runAfter(context.state.interface.after.code,result.status,result.header,result.data)
                 }
                 return {
                     code:200
@@ -767,6 +933,11 @@ module.exports=new Vuex.Store({
             })
         },
         save:function (context) {
+            if(context.state.imgUrl)
+            {
+                $.revokeUrlObject(context.state.imgUrl);
+                context.state.imgUrl=""
+            }
             var method=context.state.interface.method;
             var baseUrl=$.trim(context.state.baseUrl);
             var path=$.trim(context.state.interface.url);
@@ -783,29 +954,7 @@ module.exports=new Vuex.Store({
             context.state.param.forEach(function (obj) {
                 if(obj.name)
                 {
-                    var value=obj.value;
-                    if(obj.selValue)
-                    {
-                        if(value)
-                        {
-                            var v=obj.selValue;
-                            if(value.indexOf(v)==-1)
-                            {
-                                value.push(v);
-                            }
-                        }
-                        else
-                        {
-                            value=[obj.selValue]
-                        }
-                    }
-                    else
-                    {
-                        if(!value)
-                        {
-                            value=[];
-                        }
-                    }
+                    var value=helper.handleValue(obj);
                     param.push({
                         name:obj.name,
                         remark:obj.remark,
@@ -816,28 +965,7 @@ module.exports=new Vuex.Store({
             var query=[];
             context.getters.querySave.forEach(function (obj) {
                 var value=obj.value;
-                if(obj.selValue)
-                {
-                    if(value)
-                    {
-                        var v=obj.selValue;
-                        if(value.indexOf(v)==-1)
-                        {
-                            value.push(v);
-                        }
-                    }
-                    else
-                    {
-                        value=[obj.selValue]
-                    }
-                }
-                else
-                {
-                    if(!value)
-                    {
-                        value=[];
-                    }
-                }
+                var value=helper.handleValue(obj);
                 query.push({
                     name:obj.name,
                     must:obj.must,
@@ -854,36 +982,14 @@ module.exports=new Vuex.Store({
                 })
             })
             var body=[],bUpload=false;
-            if(method=="POST" || method=="PUT")
+            if(method=="POST" || method=="PUT" || method=="PATCH")
             {
                 if(context.state.bodyInfo.type==0)
                 {
                     context.getters.bodySave.forEach(function (obj) {
                         if(obj.type==0)
                         {
-                            var value=obj.value;
-                            if(obj.selValue)
-                            {
-                                if(value)
-                                {
-                                    var v=obj.selValue;
-                                    if(value.indexOf(v)==-1)
-                                    {
-                                        value.push(v);
-                                    }
-                                }
-                                else
-                                {
-                                    value=[obj.selValue]
-                                }
-                            }
-                            else
-                            {
-                                if(!value)
-                                {
-                                    value=[];
-                                }
-                            }
+                            var value=helper.handleValue(obj);
                             body.push({
                                 name:obj.name,
                                 type:0,
@@ -942,6 +1048,7 @@ module.exports=new Vuex.Store({
                     type:1,
                     rawRemark:context.state.interface.outInfo?context.state.interface.outInfo.rawRemark:"",
                     rawMock:context.state.interface.outInfo?context.state.interface.outInfo.rawMock:"",
+                    jsonType:(context.state.resultData && (context.state.resultData instanceof Array))?1:0
                 }
             }
             var obj={
@@ -953,6 +1060,7 @@ module.exports=new Vuex.Store({
                 bodyParam:body,
                 outParam:result,
                 restParam:param,
+                id:context.state.interface.id,
                 group:{
                     _id:context.state.interface.group._id
                 },
@@ -967,20 +1075,31 @@ module.exports=new Vuex.Store({
                 before:context.state.interface.before,
                 after:context.state.interface.after
             }
-            if(method=="POST" || method=="PUT")
+            if(method=="POST" || method=="PUT" || method=="PATCH")
             {
                 obj.bodyInfo=context.state.bodyInfo;
+                if(obj.bodyInfo.type==1 && obj.bodyInfo.rawType==2 && obj.bodyInfo.rawJSON)
+                {
+                    obj.bodyInfo.rawJSON=helper.resultSave(obj.bodyInfo.rawJSON,1);
+                }
             }
             session.set("newInterface",JSON.stringify(obj));
             var bMatchUrl=false;
-            for(var i=0;i<context.state.baseUrls.length;i++)
+            if(baseUrl!="MockServer")
             {
-                var reg=new RegExp(context.state.baseUrls[i]);
-                if(reg.test(baseUrl))
+                for(var i=0;i<context.state.baseUrls.length;i++)
                 {
-                    bMatchUrl=true;
-                    break;
+                    var reg=new RegExp(context.state.baseUrls[i]);
+                    if(reg.test(baseUrl))
+                    {
+                        bMatchUrl=true;
+                        break;
+                    }
                 }
+            }
+            else
+            {
+                bMatchUrl=true;
             }
             var pro=new Promise(function (resolve,reject) {
                 resolve();
@@ -1000,9 +1119,9 @@ module.exports=new Vuex.Store({
                         $.stopHud();
                         if(data.code==200)
                         {
+                            bus.$emit("addBaseUrl",baseUrl);
                             $.notify("添加baseUrl成功",1);
                             return pro;
-
                         }
                         else
                         {
